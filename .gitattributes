@@ -1,0 +1,21 @@
+# 统一文本行尾为 LF，避免跨平台 diff 噪声
+* text=auto eol=lf
+
+*.py   text eol=lf
+*.html text eol=lf
+*.css  text eol=lf
+*.js   text eol=lf
+*.md   text eol=lf
+*.svg  text eol=lf
+*.txt  text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.webp binary
+*.gif  binary
+*.ico  binary
+*.zip  binary

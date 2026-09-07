@@ -1,0 +1,357 @@
+/* ============================================================
+ * file-tree.css —— 通用文件树组件样式
+ * 配合 JS/file-tree.js 使用。
+ *
+ * 所有选择器都以 .ft-root 为作用域前缀，可安全放入任意页面，
+ * 不会被宿主页面的元素级样式（如 span { ... }）污染，
+ * 也不会污染宿主页面。
+ *
+ * 颜色均使用 CSS 变量，提供默认回退链（按需在宿主页面覆盖）：
+ *   --ft-accent   强调色（选中/目录图标/高亮）
+ *   --ft-border   边框
+ *   --ft-fg       常规文字
+ *   --ft-fg-dim   弱化文字（箭头/文件图标）
+ *   --ft-bg       背景（用于输入框、菜单等实底元素）
+ *   --ft-danger   危险色（删除）
+ * ============================================================ */
+
+.ft-root {
+    --ft-accent: var(--custom-primary-color, var(--primary-color, #18cfa3));
+    --ft-accent-weak: color-mix(in srgb, var(--ft-accent) 16%, transparent);
+    --ft-border: var(--ft-border-color, var(--grey-1, var(--border-color, rgba(127, 127, 127, 0.4))));
+    --ft-fg: var(--ft-fg-color, var(--grey-1, #8a8a8a));
+    --ft-fg-dim: var(--ft-dim-color, var(--grey-3, #6f6f6f));
+    --ft-bg: var(--ft-bg-color, var(--custom-bg-color-0, var(--bg-color-0, #171717)));
+    --ft-danger: var(--error-color, #ff6958);
+
+    position: relative;
+    box-sizing: border-box;
+    height: 100%;
+    min-height: 0;
+    overflow: auto;
+    font-family: "JetBrains Mono", "Noto Sans SC", Consolas, "Microsoft YaHei", monospace, sans-serif;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    color: var(--ft-fg);
+    background: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+    outline: none;
+    cursor: default;
+}
+
+.ft-root *,
+.ft-root *::before,
+.ft-root *::after {
+    box-sizing: border-box;
+}
+
+/* ---------- 空状态 ---------- */
+.ft-root .ft-empty {
+    padding: 1rem 0.5rem;
+    text-align: center;
+    color: var(--ft-fg-dim);
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+}
+
+/* ---------- 节点 ---------- */
+.ft-root .ft-node {
+    margin: 0;
+}
+
+.ft-root .ft-row {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.16rem 0.4rem;
+    border: 1px solid transparent;
+    border-radius: 0.25rem;
+    white-space: nowrap;
+    cursor: pointer;
+    color: var(--ft-fg);
+    transition: background-color 0.08s ease, border-color 0.08s ease;
+}
+
+.ft-root .ft-row:hover {
+    background: color-mix(in srgb, var(--ft-accent) 10%, transparent);
+}
+
+.ft-root .ft-row.selected {
+    background: var(--ft-accent-weak);
+    border-color: color-mix(in srgb, var(--ft-accent) 70%, transparent);
+    color: var(--ft-fg);
+    font-weight: 600;
+}
+
+.ft-root .ft-row.cut {
+    opacity: 0.35;
+}
+
+.ft-root .ft-row.dragging {
+    opacity: 0.45;
+}
+
+.ft-root .ft-row.drop-target {
+    background: var(--ft-accent-weak);
+    border-color: var(--ft-accent);
+    box-shadow: inset 0 0 0 1px var(--ft-accent);
+}
+
+/* ---------- 展开箭头 ---------- */
+.ft-root .ft-chevron {
+    flex: 0 0 auto;
+    width: 0.9rem;
+    height: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ft-fg-dim);
+    transition: transform 0.12s ease;
+}
+
+.ft-root .ft-chevron svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.ft-root .ft-node[data-collapsed="true"] > .ft-row .ft-chevron {
+    transform: rotate(-90deg);
+}
+
+.ft-root .ft-chevron-placeholder {
+    visibility: hidden;
+}
+
+/* ---------- 图标 ---------- */
+.ft-root .ft-icon {
+    flex: 0 0 auto;
+    width: 1rem;
+    height: 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ft-root .ft-icon svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* 图标中的信号黄点缀（构成主义 + 当前美学的主色点） */
+.ft-root .ic-accent,
+.ft-menu .ic-accent {
+    fill: var(--ft-accent);
+    stroke: none;
+}
+
+.ft-root .ft-icon-dir {
+    color: var(--ft-accent);
+}
+
+.ft-root .ft-icon-dir .ic-accent {
+    fill: var(--ft-fg);
+}
+
+.ft-root .ft-icon-file {
+    color: var(--ft-fg-dim);
+}
+
+.ft-root .ft-icon-file .ic-accent {
+    fill: var(--ft-accent);
+}
+
+/* ---------- 名称 ---------- */
+.ft-root .ft-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: inherit;
+}
+
+.ft-root .ft-node[data-type="dir"] > .ft-row .ft-name {
+    font-weight: 600;
+}
+
+/* ---------- 子节点（缩进与引导线） ---------- */
+.ft-root .ft-children {
+    margin-left: 0.85rem;
+    padding-left: 0.6rem;
+    border-left: 1px dashed color-mix(in srgb, var(--ft-fg-dim) 35%, transparent);
+}
+
+.ft-root .ft-children[hidden] {
+    display: none;
+}
+
+/* 展开/折叠动画（每次渲染重放，轻量） */
+.ft-root .ft-children:not([hidden]) {
+    animation: ft-child-in 0.18s ease;
+}
+
+@keyframes ft-child-in {
+    from {
+        opacity: 0;
+        transform: translateX(-5px);
+    }
+}
+
+/* ---------- 重命名输入框 ---------- */
+.ft-root .ft-rename-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    font: inherit;
+    color: var(--ft-fg);
+    background: var(--ft-bg);
+    border: 1px solid var(--ft-accent);
+    border-radius: 0.2rem;
+    padding: 0.05rem 0.3rem;
+    outline: none;
+    box-shadow: 0 0 0.35rem color-mix(in srgb, var(--ft-accent) 45%, transparent);
+}
+
+.ft-root .ft-rename-input.error {
+    border-color: var(--ft-danger);
+    box-shadow: 0 0 0.35rem color-mix(in srgb, var(--ft-danger) 40%, transparent);
+}
+
+/* ---------- 行内删除确认 ---------- */
+.ft-root .ft-confirm {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.ft-root .ft-confirm-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ft-danger);
+    font-size: 0.76rem;
+}
+
+.ft-root .ft-confirm-btn {
+    flex: 0 0 auto;
+    font: inherit;
+    font-size: 0.7rem;
+    color: var(--ft-fg);
+    background: transparent;
+    border: 1px solid var(--ft-border);
+    border-radius: 0.2rem;
+    padding: 0.05rem 0.45rem;
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.ft-root .ft-confirm-btn:hover {
+    border-color: var(--ft-fg);
+    color: var(--ft-fg);
+}
+
+.ft-root .ft-confirm-btn.ok {
+    border-color: var(--ft-danger);
+    color: var(--ft-danger);
+}
+
+.ft-root .ft-confirm-btn.ok:hover {
+    background: var(--ft-danger);
+    color: #ffffff;
+}
+
+/* ---------- 右键菜单 ----------
+ * 注意：菜单挂在 document.body 下（不在 .ft-root 内），
+ * 因此需要在此处重新声明 --ft-* 变量，保证脱离 .ft-root 作用域后仍生效。
+ */
+.ft-menu {
+    --ft-accent: var(--custom-primary-color, var(--primary-color, #18cfa3));
+    --ft-accent-weak: color-mix(in srgb, var(--ft-accent) 20%, transparent);
+    --ft-border: var(--ft-border-color, var(--grey-1, var(--border-color, rgba(127, 127, 127, 0.4))));
+    --ft-fg: var(--ft-fg-color, var(--grey-1, #8a8a8a));
+    --ft-fg-dim: var(--ft-dim-color, var(--grey-3, #6f6f6f));
+    --ft-bg: var(--ft-bg-color, var(--custom-bg-color-0, var(--bg-color-0, #171717)));
+    --ft-danger: var(--error-color, #ff6958);
+
+    position: fixed;
+    z-index: 2147483000;
+    min-width: 10rem;
+    padding: 0.35rem;
+    font-family: "JetBrains Mono", "Noto Sans SC", Consolas, "Microsoft YaHei", monospace, sans-serif;
+    font-size: 0.78rem;
+    color: var(--ft-fg);
+    background: var(--ft-menu-bg, rgba(253, 253, 251, 0.9));
+    backdrop-filter: blur(24px) saturate(1.05);
+    border: 1px solid var(--line, rgba(20, 20, 20, 0.08));
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05), 0 14px 34px rgba(0, 0, 0, 0.08);
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.ft-menu .ft-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.36rem 0.7rem;
+    border-radius: 9px;
+    cursor: pointer;
+    white-space: nowrap;
+    color: var(--ft-fg);
+}
+
+.ft-menu .ft-menu-item:hover {
+    background: var(--ft-accent-weak);
+    color: var(--ft-fg);
+}
+
+.ft-menu .ft-menu-item.disabled {
+    opacity: 0.35;
+    pointer-events: none;
+}
+
+.ft-menu .ft-menu-item.danger {
+    color: var(--ft-danger);
+}
+
+.ft-menu .ft-menu-item.danger:hover {
+    background: color-mix(in srgb, var(--ft-danger) 15%, transparent);
+    color: var(--ft-danger);
+}
+
+.ft-menu .ft-menu-sep {
+    height: 1px;
+    margin: 0.25rem 0.4rem;
+    background: var(--ft-border);
+}
+
+/* ---------- 拖到空白（移到根目录）提示 ---------- */
+.ft-root.drop-root {
+    outline: 1px dashed var(--ft-accent);
+    outline-offset: -3px;
+    background: color-mix(in srgb, var(--ft-accent) 5%, transparent);
+}
+
+/* ---------- 滚动条 ---------- */
+.ft-root::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.ft-root::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--ft-fg-dim) 40%, transparent);
+    border-radius: 4px;
+}
+
+.ft-root::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--ft-accent) 55%, transparent);
+}
+
+.ft-root::-webkit-scrollbar-track {
+    background: transparent;
+}
