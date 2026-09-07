@@ -1,0 +1,1446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LUNA · Agent Workspace</title>
+    <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/ui.css">
+    <link rel="stylesheet" href="css/file-tree.css">
+    <script type="text/javascript">
+        /* 提前恢复主题偏好，避免深色模式切换时的白屏闪烁（FOUC） */
+        (function () {
+            var t = null;
+            try {
+                t = localStorage.getItem('luna.theme');
+            } catch (e) { /* 忽略 */ }
+            if (t !== 'dark' && t !== 'light') {
+                t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+            }
+            document.documentElement.dataset.theme = t;
+        })();
+    </script>
+</head>
+
+<body data-aurora="on" data-dots="on" data-lines="on" data-drift="on">
+    <!-- CRT 扫描线（默认关闭，视图菜单可开启） -->
+    <div class="crt-overlay" id="crt-overlay" hidden></div>
+
+    <!-- 弥散渐变背景层 -->
+    <div class="aurora" id="aurora" aria-hidden="true">
+        <i class="blob b-lilac"></i>
+        <i class="blob b-sage"></i>
+        <i class="blob b-pink"></i>
+        <i class="blob b-peach"></i>
+        <i class="blob b-cream"></i>
+        <i class="blob b-aqua"></i>
+    </div>
+
+    <!-- 顶栏 -->
+    <header class="topbar">
+        <div class="brand">
+            <span class="brand-dots" id="brand-dots" title="LUNA" aria-label="LUNA"></span>
+            <div class="brand-text">
+                <b class="brand-name">LUNA</b>
+                <span class="brand-sub">Agent Workspace · Beta</span>
+            </div>
+        </div>
+
+        <nav class="menubar" id="menubar" aria-label="主菜单">
+            <div class="menu" data-key="p">
+                <button type="button" class="menu-btn" data-menu="project">Project <kbd>[P]</kbd></button>
+                <div class="menu-pop" role="menu">
+                    <button type="button" class="mp-item" data-act="new-file">新建文件 <span class="mp-kbd">＋ N</span></button>
+                    <button type="button" class="mp-item" data-act="new-dir">新建文件夹 <span class="mp-kbd">＋ ⇧ N</span></button>
+                    <div class="mp-sep"></div>
+                    <button type="button" class="mp-item" data-act="save-all">保存全部 <span class="mp-kbd">⌃ ⇧ S</span></button>
+                    <button type="button" class="mp-item" data-act="refresh">刷新文件树 <span class="mp-kbd">⌃ R</span></button>
+                    <div class="mp-sep"></div>
+                    <button type="button" class="mp-item" data-act="close-tab">关闭当前标签 <span class="mp-kbd">⌃ W</span></button>
+                    <button type="button" class="mp-item" data-act="reset">重置演示数据</button>
+                </div>
+            </div>
+
+            <div class="menu" data-key="e">
+                <button type="button" class="menu-btn" data-menu="edit">Edit <kbd>[E]</kbd></button>
+                <div class="menu-pop" role="menu">
+                    <button type="button" class="mp-item" data-act="rename">重命名 <span class="mp-kbd">F2</span></button>
+                    <button type="button" class="mp-item danger" data-act="delete">删除 <span class="mp-kbd">Del</span></button>
+                    <div class="mp-sep"></div>
+                    <button type="button" class="mp-item" data-act="cut">剪切 <span class="mp-kbd">⌃ X</span></button>
+                    <button type="button" class="mp-item" data-act="paste">粘贴 <span class="mp-kbd">⌃ V</span></button>
+                    <div class="mp-sep"></div>
+                    <button type="button" class="mp-item" data-act="copy-name">复制文件名</button>
+                </div>
+            </div>
+
+            <div class="menu" data-key="v">
+                <button type="button" class="menu-btn" data-menu="view">View <kbd>[V]</kbd></button>
+                <div class="menu-pop" role="menu">
+                    <button type="button" class="mp-item mp-check on" data-act="toggle-aurora">弥散渐变背景</button>
+                    <button type="button" class="mp-item mp-check on" data-act="toggle-dots">点阵网格</button>
+                    <button type="button" class="mp-item mp-check on" data-act="toggle-lines">交叉细线</button>
+                    <button type="button" class="mp-item mp-check on" data-act="toggle-drift">漂移动效</button>
+                    <button type="button" class="mp-item mp-check" data-act="toggle-crt">CRT 扫描线</button>
+                    <button type="button" class="mp-item mp-check" data-act="toggle-dark">深色模式 <span class="mp-kbd">⌃ D</span></button>
+                    <div class="mp-sep"></div>
+                    <button type="button" class="mp-item mp-radio" data-act="fs-small">界面字号 · 小</button>
+                    <button type="button" class="mp-item mp-radio on" data-act="fs-mid">界面字号 · 标准</button>
+                    <button type="button" class="mp-item mp-radio" data-act="fs-big">界面字号 · 大</button>
+                    <div class="mp-sep"></div>
+                    <button type="button" class="mp-item" data-act="view-reset">重置视图设置</button>
+                </div>
+            </div>
+
+            <div class="menu" data-key="x">
+                <button type="button" class="menu-btn" data-menu="more">More <kbd>[X]</kbd></button>
+                <div class="menu-pop" role="menu">
+                    <button type="button" class="mp-item" data-act="about">关于 LUNA</button>
+                    <button type="button" class="mp-item" data-act="clear-log">清空操作日志</button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 文件标签页 -->
+        <div class="tabs" id="tabs" aria-label="已打开的文件"></div>
+
+        <div class="top-actions">
+            <button type="button" class="icon-btn" id="btn-theme" title="切换深色模式 (Ctrl+D)">
+                <!-- 构成主义明暗盘：斜线一分为二，一半实心 -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="8.4" />
+                    <path d="M12 12 6.06 6.06A8.4 8.4 0 0 0 6.06 17.94Z" fill="currentColor" stroke="none" />
+                    <circle cx="12" cy="12" r="1.35" class="ic-accent" />
+                </svg>
+            </button>
+            <button type="button" class="icon-btn" id="btn-save-all" title="保存全部 (Ctrl+Shift+S)">
+                <!-- 复古磁带：外壳 + 双卷盘（储存语义） -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="2.6" y="5.4" width="18.8" height="13.2" rx="2.6" />
+                    <circle cx="8.2" cy="10.6" r="2.5" />
+                    <circle cx="15.8" cy="10.6" r="2.5" />
+                    <circle cx="8.2" cy="10.6" r="0.9" fill="currentColor" stroke="none" />
+                    <circle cx="15.8" cy="10.6" r="0.9" fill="currentColor" stroke="none" />
+                    <path d="M7 16.6 10.4 14.2" />
+                    <circle cx="17.2" cy="15" r="1.1" class="ic-accent" />
+                </svg>
+            </button>
+            <button type="button" class="icon-btn" id="btn-refresh" title="刷新文件树 (Ctrl+R)">
+                <!-- 构成主义回旋箭头（直角箭头头部） -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 12a9 9 0 1 1-2.9-6.5" />
+                    <path d="M21 3.4v6h-6" />
+                    <rect x="15.6" y="15.6" width="2.7" height="2.7" class="ic-accent" />
+                </svg>
+            </button>
+            <button type="button" class="pill-btn accent-btn" id="btn-new-file" title="新建文件 (Ctrl+N)">
+                <!-- 磁带刻录：小磁带 + 加号 -->
+                <svg class="pill-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="7" width="18" height="10" rx="2" />
+                    <path d="M12 10.4v3.2M10.4 12h3.2" />
+                </svg>
+                <span class="nf-label">New File</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="content">
+        <aside class="panel">
+            <div class="panel-head">
+                <span class="hh">File Tree</span>
+                <span class="panel-meta" id="tree-count">0 items</span>
+            </div>
+            <div class="file-tree" id="file-tree" aria-label="文件树"></div>
+            <div class="tree-status">
+                <span class="status-text" id="status-text">未选中任何文件</span>
+                <span class="hint">双击打开 · F2 重命名 · Del 删除 · Ctrl+X / Ctrl+V · 拖拽移动</span>
+            </div>
+        </aside>
+
+        <section class="center" id="center-container"></section>
+
+        <aside class="panel right-panel">
+            <div class="panel-head">
+                <span class="hh">Operation Log</span>
+                <span class="panel-meta heart" id="log-count" title="日志条数">♡ 0</span>
+            </div>
+            <button type="button" class="ghost-btn" id="btn-reset">
+                <!-- 磁带回卷：重置语义 -->
+                <svg class="ic-reset" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M20 12a8 8 0 1 1-2.35-5.65" />
+                    <path d="M20.5 3.5v5.9h-5.9" />
+                </svg>
+                Reset Data
+            </button>
+            <ul id="op-log"></ul>
+        </aside>
+    </main>
+
+    <!-- 模态层（新建/确认/关于） -->
+    <div class="modal-backdrop" id="modal-backdrop" hidden></div>
+
+    <script type="text/javascript" src="js/file-tree.js"></script>
+    <script type="text/javascript">
+        (function () {
+            'use strict';
+
+            /* =====================================================
+             * 工具方法
+             * ===================================================== */
+            const $ = (sel, el) => (el || document).querySelector(sel);
+            const $$ = (sel, el) => Array.prototype.slice.call((el || document).querySelectorAll(sel));
+
+            function escapeHtml(value) {
+                return String(value).replace(/[&<>"']/g, function (c) {
+                    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+                });
+            }
+
+            function uid(prefix) {
+                return (prefix || 'f-') + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
+            }
+
+            /* =====================================================
+             * 5×7 点阵字（装饰字体，仅拉丁字符；logo/像素卡使用）
+             * 每个字符 = 7 行，每行 5 位二进制（1 为有墨点）。
+             * ===================================================== */
+            const DOT_FONT = {
+                ' ': [0, 0, 0, 0, 0, 0, 0],
+                'A': [0x0E, 0x11, 0x11, 0x1F, 0x11, 0x11, 0x11],
+                'B': [0x1E, 0x11, 0x11, 0x1E, 0x11, 0x11, 0x1E],
+                'C': [0x0E, 0x11, 0x10, 0x10, 0x10, 0x11, 0x0E],
+                'D': [0x1E, 0x11, 0x11, 0x11, 0x11, 0x11, 0x1E],
+                'E': [0x1F, 0x10, 0x10, 0x1E, 0x10, 0x10, 0x1F],
+                'F': [0x1F, 0x10, 0x10, 0x1E, 0x10, 0x10, 0x10],
+                'G': [0x0E, 0x11, 0x10, 0x17, 0x11, 0x11, 0x0F],
+                'H': [0x11, 0x11, 0x11, 0x1F, 0x11, 0x11, 0x11],
+                'I': [0x0E, 0x04, 0x04, 0x04, 0x04, 0x04, 0x0E],
+                'J': [0x07, 0x02, 0x02, 0x02, 0x12, 0x12, 0x0C],
+                'K': [0x11, 0x12, 0x14, 0x18, 0x14, 0x12, 0x11],
+                'L': [0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x1F],
+                'M': [0x11, 0x1B, 0x15, 0x15, 0x11, 0x11, 0x11],
+                'N': [0x11, 0x19, 0x15, 0x13, 0x11, 0x11, 0x11],
+                'O': [0x0E, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0E],
+                'P': [0x1E, 0x11, 0x11, 0x1E, 0x10, 0x10, 0x10],
+                'Q': [0x0E, 0x11, 0x11, 0x11, 0x15, 0x12, 0x0D],
+                'R': [0x1E, 0x11, 0x11, 0x1E, 0x14, 0x12, 0x11],
+                'S': [0x0F, 0x10, 0x10, 0x0E, 0x01, 0x01, 0x1E],
+                'T': [0x1F, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04],
+                'U': [0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0E],
+                'V': [0x11, 0x11, 0x11, 0x11, 0x11, 0x0A, 0x04],
+                'W': [0x11, 0x11, 0x11, 0x15, 0x15, 0x1B, 0x11],
+                'X': [0x11, 0x11, 0x0A, 0x04, 0x0A, 0x11, 0x11],
+                'Y': [0x11, 0x11, 0x0A, 0x04, 0x04, 0x04, 0x04],
+                'Z': [0x1F, 0x01, 0x02, 0x04, 0x08, 0x10, 0x1F],
+                '0': [0x0E, 0x11, 0x13, 0x15, 0x19, 0x11, 0x0E],
+                '1': [0x04, 0x0C, 0x04, 0x04, 0x04, 0x04, 0x0E],
+                '2': [0x0E, 0x11, 0x01, 0x02, 0x04, 0x08, 0x1F],
+                '3': [0x1F, 0x02, 0x04, 0x02, 0x01, 0x11, 0x0E],
+                '4': [0x02, 0x06, 0x0A, 0x12, 0x1F, 0x02, 0x02],
+                '5': [0x1F, 0x10, 0x1E, 0x01, 0x01, 0x11, 0x0E],
+                '6': [0x06, 0x08, 0x10, 0x1E, 0x11, 0x11, 0x0E],
+                '7': [0x1F, 0x01, 0x02, 0x04, 0x08, 0x08, 0x08],
+                '8': [0x0E, 0x11, 0x11, 0x0E, 0x11, 0x11, 0x0E],
+                '9': [0x0E, 0x11, 0x11, 0x0F, 0x01, 0x02, 0x0C],
+                '.': [0x00, 0x00, 0x00, 0x00, 0x00, 0x0C, 0x0C],
+                '·': [0x00, 0x00, 0x00, 0x0C, 0x00, 0x00, 0x00],
+                '-': [0x00, 0x00, 0x00, 0x1F, 0x00, 0x00, 0x00],
+                '_': [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1F]
+            };
+
+            /**
+             * 生成点阵文字 SVG（圆点风格）
+             * @param {string} text 仅支持拉丁字母/数字/空格等（其他字符自动跳过）
+             * @param {number} dot  单点边长（px）
+             * @param {string} color 颜色
+             */
+            function dotMatrixSvg(text, dot, color) {
+                dot = dot || 6;
+                const chars = String(text || '').toUpperCase().split('');
+                const cols = chars.length * 6 - 1; // 5 列 + 1 列间隔
+                const h = 7;
+                let circles = '';
+                chars.forEach(function (ch, ci) {
+                    const pattern = DOT_FONT[ch];
+                    if (!pattern) return;
+                    for (let r = 0; r < h; r++) {
+                        const row = pattern[r];
+                        if (!row) continue;
+                        for (let c = 0; c < 5; c++) {
+                            if (row & (1 << (4 - c))) {
+                                const cx = (ci * 6 + c + 0.5) * dot;
+                                const cy = (r + 0.5) * dot;
+                                circles += '<circle cx="' + cx.toFixed(2) + '" cy="' + cy.toFixed(2) + '" r="' +
+                                    (dot * 0.36).toFixed(2) + '"/>';
+                            }
+                        }
+                    }
+                });
+                return '<svg viewBox="0 0 ' + (cols * dot) + ' ' + (h * dot) + '" width="' + (cols * dot) +
+                    '" height="' + (h * dot) + '" fill="' + color + '" aria-hidden="true">' + circles + '</svg>';
+            }
+
+            /* =====================================================
+             * 演示数据（与 api.py 保持一致；后端可用时以后端为准）
+             * ===================================================== */
+            const SAMPLE_TREE = [{
+                id: 'd-src',
+                name: 'src',
+                type: 'dir',
+                children: [{
+                    id: 'f-main',
+                    name: 'main.py',
+                    type: 'file'
+                }, {
+                    id: 'd-utils',
+                    name: 'utils',
+                    type: 'dir',
+                    children: [
+                        { id: 'f-fmt', name: 'formatter.py', type: 'file' },
+                        { id: 'f-io', name: 'io_helper.py', type: 'file' },
+                        { id: 'f-cache', name: 'cache.py', type: 'file' }
+                    ]
+                }, {
+                    id: 'd-ui',
+                    name: 'ui',
+                    type: 'dir',
+                    children: [
+                        { id: 'f-app', name: 'app.js', type: 'file' },
+                        { id: 'f-style', name: 'style.css', type: 'file' },
+                        { id: 'f-index', name: 'index.html', type: 'file' }
+                    ]
+                }, {
+                    id: 'f-requirements',
+                    name: 'requirements.txt',
+                    type: 'file'
+                }]
+            }, {
+                id: 'd-docs',
+                name: 'docs',
+                type: 'dir',
+                children: [
+                    { id: 'f-readme', name: 'README.md', type: 'file' },
+                    { id: 'f-api', name: 'API.md', type: 'file' }
+                ]
+            }, {
+                id: 'f-pkg',
+                name: 'package.json',
+                type: 'file'
+            }, {
+                id: 'f-config',
+                name: 'config.yaml',
+                type: 'file'
+            }];
+
+            /* 示例文件内容（无后端时的回退内容） */
+            const FALLBACK_CONTENTS = {
+                'f-main': [
+                    '#!/usr/bin/env python3',
+                    '# LUNA demo: agent entry — 模拟 Agent 主入口',
+                    '',
+                    'from utils.formatter import format_tree',
+                    'from utils.io_helper import read_workspace',
+                    '',
+                    '',
+                    'def bootstrap(workspace: str) -> None:',
+                    '    """加载工作区并格式化输出文件树。"""',
+                    '    tree = read_workspace(workspace)',
+                    '    print(format_tree(tree))',
+                    '',
+                    '',
+                    'if __name__ == "__main__":',
+                    '    bootstrap("")',
+                    ''
+                ].join('\n'),
+                'f-fmt': [
+                    '"""格式化文件树为文本树。"""',
+                    '',
+                    'def format_tree(nodes, indent: str = "") -> str:',
+                    '    lines = []',
+                    '    for node in nodes:',
+                    '        lines.append(indent + ("▸ " if node["type"] == "dir" else "· ") + node["name"])',
+                    '        if node.get("children"):',
+                    '            lines.append(format_tree(node["children"], indent + "  "))',
+                    '    return "\\n".join(lines)',
+                    ''
+                ].join('\n'),
+                'f-io': [
+                    '"""工作区读写工具。"""',
+                    'import json',
+                    '',
+                    '',
+                    'def read_workspace(path: str) -> list:',
+                    '    # TODO: 接入真实文件系统',
+                    '    return []',
+                    '',
+                    '',
+                    'def write_workspace(path: str, data: list) -> None:',
+                    '    # TODO: 接入真实文件系统',
+                    '    print(json.dumps(data, ensure_ascii=False, indent=2))',
+                    ''
+                ].join('\n'),
+                'f-cache': [
+                    '"""轻量缓存。"""',
+                    '',
+                    '_cache = {}',
+                    '',
+                    '',
+                    'def get(key):',
+                    '    return _cache.get(key)',
+                    '',
+                    '',
+                    'def put(key, value):',
+                    '    _cache[key] = value',
+                    ''
+                ].join('\n'),
+                'f-app': [
+                    '// LUNA demo: 前端交互逻辑',
+                    'const app = {',
+                    '  state: { activeFile: null },',
+                    '  open(file) { this.state.activeFile = file; console.log("open", file); },',
+                    '  save() { console.log("save"); }',
+                    '};',
+                    '',
+                    'window.app = app;',
+                    ''
+                ].join('\n'),
+                'f-style': [
+                    '/* LUNA demo: 样式示例 */',
+                    '.card {',
+                    '  border-radius: 18px;',
+                    '  background: rgba(255, 255, 255, 0.8);',
+                    '  box-shadow: 0 8px 30px rgba(20, 20, 20, 0.07);',
+                    '}',
+                    ''
+                ].join('\n'),
+                'f-index': [
+                    '<!DOCTYPE html>',
+                    '<html lang="zh-CN">',
+                    '<head>',
+                    '  <meta charset="UTF-8">',
+                    '  <title>LUNA Demo</title>',
+                    '</head>',
+                    '<body>',
+                    '  <h1>Hello LUNA</h1>',
+                    '</body>',
+                    '</html>',
+                    ''
+                ].join('\n'),
+                'f-requirements': 'pywebview>=5.0\nflask\nrequests\n',
+                'f-readme': [
+                    '# LUNA',
+                    '',
+                    '基于 pywebview 的 Agent 客户端项目骨架。',
+                    '',
+                    '## 运行',
+                    '',
+                    '```bash',
+                    'pip install -r requirements.txt',
+                    'python app.py',
+                    '```',
+                    ''
+                ].join('\n'),
+                'f-api': [
+                    '# API 文档（示例）',
+                    '',
+                    '## `list_tree()`',
+                    '返回工作区文件树根节点列表。',
+                    '',
+                    '## `open_file(node_id)`',
+                    '返回 `{ "ok": true, "content": "..." }`。',
+                    '',
+                    '## `save_file(node_id, content)`',
+                    '保存内容。',
+                    ''
+                ].join('\n'),
+                'f-pkg': [
+                    '{',
+                    '  "name": "luna-demo",',
+                    '  "version": "0.1.0",',
+                    '  "private": true',
+                    '}',
+                    ''
+                ].join('\n'),
+                'f-config': [
+                    '# LUNA 演示配置',
+                    'workspace: .',
+                    'auto_save: false',
+                    'theme: paper',
+                    ''
+                ].join('\n')
+            };
+
+            /* 新建文件的内容模板（按扩展名） */
+            const FILE_TEMPLATES = {
+                '.py': '#!/usr/bin/env python3\n# -*- coding: utf-8 -*-\n\n\n',
+                '.js': '// new file\n\n\n',
+                '.css': '/* new file */\n\n\n',
+                '.html': '<!DOCTYPE html>\n<html lang="zh-CN">\n<head>\n  <meta charset="UTF-8">\n  <title>Untitled</title>\n</head>\n<body>\n\n</body>\n</html>\n',
+                '.md': '# Untitled\n\n\n',
+                '.json': '{\n  \n}\n',
+                '.yaml': '# config\n\n',
+                '.txt': ''
+            };
+
+            function templateFor(name) {
+                const dot = String(name).lastIndexOf('.');
+                const ext = dot >= 0 ? String(name).slice(dot).toLowerCase() : '';
+                return Object.prototype.hasOwnProperty.call(FILE_TEMPLATES, ext) ? FILE_TEMPLATES[ext] : '';
+            }
+
+            function fileKind(name) {
+                const dot = String(name).lastIndexOf('.');
+                return dot >= 0 ? String(name).slice(dot + 1).toUpperCase() : 'TXT';
+            }
+
+            /* =====================================================
+             * 后端桥接（pywebview）
+             * ===================================================== */
+            function hasBackend() {
+                return !!(window.pywebview && window.pywebview.api);
+            }
+
+            async function callBackend(name) {
+                if (hasBackend() && typeof window.pywebview.api[name] === 'function') {
+                    try {
+                        return await window.pywebview.api[name].apply(null, Array.prototype.slice.call(arguments, 1));
+                    } catch (err) {
+                        console.warn('[LUNA] 后端调用 ' + name + ' 失败：', err);
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            async function loadTree() {
+                if (hasBackend() && typeof window.pywebview.api.list_tree === 'function') {
+                    try {
+                        const data = await window.pywebview.api.list_tree();
+                        if (Array.isArray(data) && data.length) return data;
+                    } catch (err) {
+                        console.warn('[LUNA] 后端 list_tree 失败，使用本地示例数据：', err);
+                    }
+                }
+                return SAMPLE_TREE;
+            }
+
+            async function loadContent(node) {
+                if (hasBackend() && typeof window.pywebview.api.open_file === 'function') {
+                    try {
+                        const r = await window.pywebview.api.open_file(node.id);
+                        if (r && r.ok && typeof r.content === 'string') return r.content;
+                    } catch (err) {
+                        console.warn('[LUNA] 后端 open_file 失败，使用本地内容：', err);
+                    }
+                }
+                return Object.prototype.hasOwnProperty.call(FALLBACK_CONTENTS, node.id)
+                    ? FALLBACK_CONTENTS[node.id]
+                    : templateFor(node.name);
+            }
+
+            /* =====================================================
+             * 全局状态
+             * ===================================================== */
+            const tabs = [];            // { id, name, current, saved, dirty, kind }
+            let activeTabId = null;
+            let tree = null;            // FileTree 实例
+
+            const viewState = {
+                aurora: true,
+                dots: true,
+                lines: true,
+                drift: true,
+                crt: false,
+                fs: 1, // 0 小 / 1 标准 / 2 大
+                dark: 'system' // 'system' | 'dark' | 'light'（跟随系统 / 强制深 / 强制浅）
+            };
+
+            /* 读取持久化的主题偏好（无偏好时跟随系统） */
+            (function initThemePreference() {
+                try {
+                    const saved = localStorage.getItem('luna.theme');
+                    if (saved === 'dark' || saved === 'light') viewState.dark = saved;
+                } catch (err) { /* 忽略：无存储环境 */ }
+            })();
+
+            /* =====================================================
+             * 操作日志 / 状态栏
+             * ===================================================== */
+            const logList = $('#op-log');
+            const logCount = $('#log-count');
+            const statusText = $('#status-text');
+
+            function log(message, kind) {
+                const li = document.createElement('li');
+                li.className = 'log-item' + (kind ? ' log-' + kind : '');
+                const time = document.createElement('span');
+                time.className = 'log-time';
+                time.textContent = new Date().toTimeString().slice(0, 8);
+                const text = document.createElement('span');
+                text.className = 'log-text';
+                text.textContent = message;
+                li.append(time, text);
+                logList.prepend(li);
+                while (logList.children.length > 80) logList.lastElementChild.remove();
+                logCount.textContent = '♡ ' + logList.children.length;
+            }
+
+            function setStatus(text) {
+                statusText.textContent = text;
+                /* 触发一次轻闪动效 */
+                statusText.classList.remove('flash');
+                void statusText.offsetWidth; // 强制重排以重启动画
+                statusText.classList.add('flash');
+            }
+
+            /* =====================================================
+             * 视图设置
+             * ===================================================== */
+            function isDarkNow() {
+                return document.documentElement.dataset.theme === 'dark';
+            }
+
+            function applyView() {
+                document.body.dataset.aurora = viewState.aurora ? 'on' : 'off';
+                document.body.dataset.dots = viewState.dots ? 'on' : 'off';
+                document.body.dataset.lines = viewState.lines ? 'on' : 'off';
+                document.body.dataset.drift = viewState.drift ? 'on' : 'off';
+                $('#crt-overlay').hidden = !viewState.crt;
+                const sizes = ['0.875rem', '1rem', '1.15rem'];
+                document.documentElement.style.fontSize = sizes[viewState.fs] || '1rem';
+
+                /* 深色模式：resolve 出实际主题并持久化手动选择 */
+                let dark;
+                if (viewState.dark === 'dark') dark = true;
+                else if (viewState.dark === 'light') dark = false;
+                else dark = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+                try {
+                    if (viewState.dark === 'system') localStorage.removeItem('luna.theme');
+                    else localStorage.setItem('luna.theme', viewState.dark);
+                } catch (err) { /* 忽略：无存储环境 */ }
+
+                /* 同步菜单勾选状态 */
+                $$('.mp-check[data-act]').forEach(function (el) {
+                    const key = el.dataset.act.replace('toggle-', '');
+                    if (key === 'dark') {
+                        el.classList.toggle('on', dark);
+                        return;
+                    }
+                    if (Object.prototype.hasOwnProperty.call(viewState, key)) {
+                        el.classList.toggle('on', !!viewState[key]);
+                    }
+                });
+                $$('.mp-radio[data-act]').forEach(function (el) {
+                    el.classList.toggle('on', el.dataset.act === 'fs-' + ['small', 'mid', 'big'][viewState.fs]);
+                });
+            }
+
+            /* =====================================================
+             * 文件树
+             * ===================================================== */
+            function countItems() {
+                let n = 0;
+                (function walk(nodes) {
+                    nodes.forEach(function (node) {
+                        n++;
+                        if (node.children) walk(node.children);
+                    });
+                })(tree ? tree.getData() : []);
+                return n;
+            }
+
+            function updateTreeCount() {
+                $('#tree-count').textContent = countItems() + ' items';
+            }
+
+            /* 新建节点（放置于 root，或在指定目录下） */
+            function createNode(name, isDir, parentNode) {
+                const node = {
+                    id: uid(isDir ? 'd-' : 'f-'),
+                    name: name,
+                    type: isDir ? 'dir' : 'file'
+                };
+                if (isDir) node.children = [];
+                const data = tree.getData();
+                if (parentNode && parentNode.type === 'dir') {
+                    parentNode.children.push(node);
+                } else {
+                    data.push(node);
+                }
+                tree.refresh();
+                updateTreeCount();
+                return node;
+            }
+
+            /* =====================================================
+             * 标签页
+             * ===================================================== */
+            const tabsEl = $('#tabs');
+
+            function findTab(id) {
+                return tabs.find(function (t) { return t.id === id; }) || null;
+            }
+
+            function renderTabs() {
+                if (!tabs.length) {
+                    tabsEl.innerHTML = '';
+                    return;
+                }
+                tabsEl.innerHTML = tabs.map(function (t) {
+                    return '<div class="tab' + (t.id === activeTabId ? ' active' : '') + '" data-id="' +
+                        escapeHtml(t.id) + '" title="' + escapeHtml(t.name) + '">' +
+                        '<span class="t-dot"></span>' +
+                        '<span class="t-name">' + escapeHtml(t.name) + '</span>' +
+                        (t.dirty ? '<span class="t-dirty" title="未保存的修改"></span>' : '') +
+                        '<button type="button" class="t-close" data-close="' + escapeHtml(t.id) + '" title="关闭标签">×</button>' +
+                        '</div>';
+                }).join('');
+            }
+
+            async function openFile(node) {
+                let tab = findTab(node.id);
+                if (!tab) {
+                    const content = await loadContent(node);
+                    tab = {
+                        id: node.id,
+                        name: node.name,
+                        kind: fileKind(node.name),
+                        saved: content,
+                        current: content, // 当前缓冲区（含未保存修改）
+                        dirty: false
+                    };
+                    tabs.push(tab);
+                }
+                activeTabId = tab.id;
+                renderTabs();
+                renderEditor(tab);
+                setStatus('打开：' + node.name);
+                log('打开文件：' + node.name);
+            }
+
+            function requestCloseTab(id) {
+                const tab = findTab(id);
+                if (!tab) return;
+                if (tab.dirty) {
+                    openConfirm({
+                        title: '未保存的更改',
+                        body: '「' + tab.name + '」有未保存的修改，关闭标签将丢弃这些修改。',
+                        okLabel: '关闭标签',
+                        okKind: 'danger',
+                        onOk: function () { closeTab(id); }
+                    });
+                } else {
+                    closeTab(id);
+                }
+            }
+
+            function closeTab(id) {
+                const tab = findTab(id);
+                tabs.splice(tabs.indexOf(tab), 1);
+                if (activeTabId === id) {
+                    const next = tabs.length ? tabs[tabs.length - 1].id : null;
+                    activeTabId = next;
+                }
+                renderTabs();
+                if (activeTabId) renderEditor(findTab(activeTabId));
+                else renderEmptyState();
+                log('关闭标签：' + tab.name, 'sys');
+                setStatus(activeTabId ? '当前文件：' + findTab(activeTabId).name : '未打开任何文件');
+            }
+
+            /* =====================================================
+             * 中央编辑器
+             * ===================================================== */
+            const center = $('#center-container');
+
+            function renderEmptyState() {
+                center.innerHTML = '';
+                const wrap = document.createElement('div');
+                wrap.className = 'empty-hero';
+
+                const tape1 = document.createElement('div');
+                tape1.className = 'tape t1';
+                const tape2 = document.createElement('div');
+                tape2.className = 'tape t2';
+
+                /* 构成主义磁带徽章（装饰） */
+                const heroTape = document.createElement('div');
+                heroTape.className = 'hero-tape';
+                heroTape.innerHTML =
+                    '<svg viewBox="0 0 168 104" aria-hidden="true">' +
+                    '<path class="ht-line" d="M46 12h86l22 16-4 58H34L20 62l4-30Z"/>' +
+                    '<path class="ht-accent" d="M132 28h22l-16 20h-22Z"/>' +
+                    '<circle cx="58" cy="52" r="17" stroke="currentColor" stroke-width="2" fill="none"/>' +
+                    '<circle cx="58" cy="52" r="5" fill="currentColor"/>' +
+                    '<circle cx="110" cy="52" r="17" stroke="currentColor" stroke-width="2" fill="none"/>' +
+                    '<circle cx="110" cy="52" r="5" fill="currentColor"/>' +
+                    '<path class="ht-solid" d="M132 70h22v20h-22Z" opacity="0.9"/>' +
+                    '<path class="ht-accent" d="M42 62h30l-6 22H36Z"/>' +
+                    '<circle cx="140" cy="44" r="2.4" fill="currentColor"/>' +
+                    '<path d="M150 8v14" stroke="currentColor" stroke-width="2"/>' +
+                    '</svg>';
+
+                const eyebrow = document.createElement('div');
+                eyebrow.className = 'empty-eyebrow';
+                eyebrow.textContent = '· LUNA — Agent Workspace ·';
+
+                const title = document.createElement('h1');
+                title.className = 'empty-title';
+                title.textContent = 'Start on the canvas.';
+
+                const sub = document.createElement('div');
+                sub.className = 'empty-sub';
+                sub.textContent = '在左侧文件树中双击任意文件即可打开；顶部菜单栏与文件标签页均可实际操作。';
+
+                /* 像素黑卡装饰 */
+                const card = document.createElement('div');
+                card.className = 'pixel-card';
+                const pcTitle = document.createElement('span');
+                pcTitle.className = 'pc-title';
+                pcTitle.innerHTML = dotMatrixSvg('LUNA KERNEL', 6, '#ffffff');
+                const pcSub = document.createElement('span');
+                pcSub.className = 'pc-sub';
+                pcSub.textContent = 'idle · awaiting input';
+                const stars = document.createElement('div');
+                stars.className = 'pc-stars';
+                for (let i = 0; i < 26; i++) {
+                    const s = document.createElement('span');
+                    s.className = 'px-star';
+                    const size = 2 + Math.random() * 2.2;
+                    s.style.width = size.toFixed(1) + 'px';
+                    s.style.height = size.toFixed(1) + 'px';
+                    s.style.left = (5 + Math.random() * 90).toFixed(1) + '%';
+                    s.style.top = (8 + Math.random() * 82).toFixed(1) + '%';
+                    s.style.animationDelay = (Math.random() * 2.6).toFixed(2) + 's';
+                    stars.appendChild(s);
+                }
+                card.append(pcTitle, pcSub, stars);
+
+                wrap.append(heroTape, eyebrow, title, sub, card);
+                center.append(tape1, tape2, wrap);
+            }
+
+            function renderEditor(tab) {
+                center.innerHTML = '';
+                const card = document.createElement('div');
+                card.className = 'editor-card';
+
+                /* ---- 头部 ---- */
+                const head = document.createElement('div');
+                head.className = 'editor-head';
+                const dot = document.createElement('span');
+                dot.className = 'ed-dot';
+                const name = document.createElement('span');
+                name.className = 'ed-name';
+                name.textContent = tab.name;
+                const badge = document.createElement('span');
+                badge.className = 'ed-badge';
+                badge.textContent = tab.kind || 'TXT';
+                const meta = document.createElement('span');
+                meta.className = 'ed-meta';
+                meta.textContent = (typeof tab.current === 'string' ? tab.current : tab.saved).length + ' 字符';
+                const state = document.createElement('span');
+                state.className = 'ed-state';
+                const saveBtn = document.createElement('button');
+                saveBtn.type = 'button';
+                saveBtn.className = 'pill-btn small dark';
+                saveBtn.textContent = '保存 ⌃S';
+                head.append(dot, name, badge, meta, state, saveBtn);
+
+                /* ---- 编辑区 ---- */
+                const wrap = document.createElement('div');
+                wrap.className = 'editor-wrap';
+                const input = document.createElement('textarea');
+                input.className = 'editor-input';
+                input.spellcheck = false;
+                input.setAttribute('aria-label', '编辑器：' + tab.name);
+                input.value = typeof tab.current === 'string' ? tab.current : (tab.saved || '');
+                wrap.appendChild(input);
+
+                /* ---- 底部状态 ---- */
+                const foot = document.createElement('div');
+                foot.className = 'editor-foot';
+                const fCursor = document.createElement('span');
+                fCursor.textContent = 'Ln 1, Col 1';
+                const fChars = document.createElement('span');
+                fChars.textContent = (typeof tab.current === 'string' ? tab.current : tab.saved).length + ' 字符 · UTF-8';
+                const fSpacer = document.createElement('span');
+                fSpacer.className = 'ef-spacer';
+                foot.append(fCursor, fChars, fSpacer);
+
+                card.append(head, wrap, foot);
+                center.appendChild(card);
+
+                /* ---- 交互 ---- */
+                function updateStats() {
+                    const v = input.value;
+                    const pos = input.selectionStart;
+                    const before = v.slice(0, pos).split('\n');
+                    fCursor.textContent = 'Ln ' + before.length + ', Col ' + (before[before.length - 1].length + 1);
+                    fChars.textContent = v.length + ' 字符 · UTF-8';
+                    meta.textContent = v.length + ' 字符';
+                }
+
+                function updateState() {
+                    state.classList.toggle('dirty', tab.dirty);
+                    state.textContent = tab.dirty ? '未保存' : '已保存';
+                    saveBtn.disabled = !tab.dirty;
+                    saveBtn.style.opacity = tab.dirty ? '1' : '0.55';
+                }
+
+                input.addEventListener('input', function () {
+                    tab.current = input.value;
+                    tab.dirty = tab.current !== tab.saved;
+                    updateState();
+                    updateStats();
+                    renderTabs();
+                });
+                input.addEventListener('keyup', updateStats);
+                input.addEventListener('click', updateStats);
+                input.addEventListener('keydown', function (e) {
+                    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                        e.preventDefault();
+                        saveTab(tab.id, input);
+                    }
+                });
+
+                saveBtn.addEventListener('click', function () { saveTab(tab.id, input); });
+
+                tab._input = input;
+                updateState();
+                updateStats();
+                input.focus();
+            }
+
+            function saveTab(id, inputRef) {
+                const tab = findTab(id);
+                if (!tab) return;
+                const input = inputRef || (tab._input instanceof HTMLTextAreaElement ? tab._input : null);
+                const content = input ? input.value : (typeof tab.current === 'string' ? tab.current : tab.saved);
+                tab.saved = content;
+                tab.current = content;
+                tab.dirty = false;
+                callBackend('save_file', tab.id, content);
+                renderTabs();
+                setStatus('已保存：' + tab.name);
+                log('保存：' + tab.name, 'edit');
+                if (activeTabId === id) {
+                    const state = $('.ed-state', center);
+                    if (state) {
+                        state.classList.remove('dirty');
+                        state.textContent = '已保存';
+                    }
+                    const btn = $('.editor-head .pill-btn', center);
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.style.opacity = '0.55';
+                    }
+                }
+            }
+
+            function saveAll() {
+                tabs.forEach(function (tab) {
+                    const input = tab._input instanceof HTMLTextAreaElement ? tab._input : null;
+                    const content = input ? input.value : (typeof tab.current === 'string' ? tab.current : tab.saved);
+                    tab.saved = content;
+                    tab.current = content;
+                    tab.dirty = false;
+                    callBackend('save_file', tab.id, content);
+                });
+                renderTabs();
+                if (activeTabId) renderEditor(findTab(activeTabId));
+                setStatus('已保存全部文件');
+                log('保存全部（' + tabs.length + ' 个标签）', 'edit');
+            }
+
+            /* =====================================================
+             * 模态
+             * ===================================================== */
+            const modalBackdrop = $('#modal-backdrop');
+
+            function openModal(opts) {
+                modalBackdrop.innerHTML = '';
+                modalBackdrop.hidden = false;
+
+                const modal = document.createElement('div');
+                modal.className = 'modal';
+
+                const title = document.createElement('h2');
+                title.className = 'modal-title';
+                title.textContent = opts.title || '';
+
+                const body = document.createElement('div');
+                body.className = 'modal-body';
+                if (typeof opts.body === 'string') body.innerHTML = opts.body;
+                else if (opts.body) body.appendChild(opts.body);
+
+                const actions = document.createElement('div');
+                actions.className = 'modal-actions';
+
+                const close = function () {
+                    modalBackdrop.hidden = true;
+                    modalBackdrop.innerHTML = '';
+                    document.removeEventListener('keydown', onKey, true);
+                };
+
+                const onKey = function (e) {
+                    if (e.key === 'Escape') {
+                        e.stopPropagation();
+                        close();
+                    }
+                };
+
+                (opts.actions || []).forEach(function (act) {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'pill-btn' +
+                        (act.kind === 'primary' ? ' accent-btn' : '') +
+                        (act.kind === 'dark' ? ' dark' : '') +
+                        (act.kind === 'danger' ? ' dark' : '');
+                    if (act.kind === 'danger') btn.style.background = 'var(--danger)';
+                    btn.textContent = act.label;
+                    btn.addEventListener('click', function () {
+                        const keep = act.onClick ? act.onClick() : undefined;
+                        if (keep !== false) close();
+                    });
+                    actions.appendChild(btn);
+                });
+
+                modal.append(title, body, actions);
+                modalBackdrop.appendChild(modal);
+                document.addEventListener('keydown', onKey, true);
+
+                const firstInput = modal.querySelector('input');
+                if (firstInput) firstInput.focus();
+                return modal;
+            }
+
+            function openConfirm(opts) {
+                return openModal({
+                    title: opts.title,
+                    body: opts.body,
+                    actions: [
+                        { label: opts.cancelLabel || '取消', kind: 'ghost', onClick: function () { } },
+                        { label: opts.okLabel || '确定', kind: opts.okKind || 'dark', onClick: opts.onOk }
+                    ]
+                });
+            }
+
+            function openCreateModal(isDir, parentNode) {
+                const input = document.createElement('input');
+                input.className = 'm-input';
+                input.type = 'text';
+                input.placeholder = isDir ? '文件夹名称…' : '文件名，如 app.py…';
+                input.value = isDir ? 'new-folder' : 'new-file.py';
+                input.spellcheck = false;
+
+                const hint = document.createElement('div');
+                hint.className = 'm-hint';
+                hint.textContent = parentNode && parentNode.type === 'dir'
+                    ? '将创建在「' + parentNode.name + '」目录下。'
+                    : (isDir ? '将创建在根目录下。' : '支持 .py / .js / .css / .html / .md / .json / .yaml 模板。');
+
+                const bodyWrap = document.createElement('div');
+                bodyWrap.append(input, hint);
+
+                openModal({
+                    title: isDir ? '新建文件夹' : '新建文件',
+                    body: bodyWrap,
+                    actions: [
+                        { label: '取消', kind: 'ghost', onClick: function () { } },
+                        {
+                            label: isDir ? '创建文件夹' : '创建文件',
+                            kind: 'primary',
+                            onClick: function () {
+                                const name = input.value.trim();
+                                if (!name || /[\/\\]/.test(name)) {
+                                    input.style.borderColor = 'var(--danger)';
+                                    input.focus();
+                                    return false; // 阻止关闭
+                                }
+                                const node = createNode(name, isDir, parentNode);
+                                log(isDir ? '新建文件夹：' + name : '新建文件：' + name, 'sys');
+                                setStatus(isDir ? '已创建文件夹：' + name : '已创建文件：' + name);
+                                if (!isDir) openFile(node);
+                            }
+                        }
+                    ]
+                });
+                input.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        const btns = $$('.modal-actions .pill-btn', modalBackdrop);
+                        if (btns.length) btns[btns.length - 1].click();
+                    }
+                    e.stopPropagation();
+                });
+            }
+
+            function openAboutModal() {
+                const wrap = document.createElement('div');
+                wrap.style.cssText = 'text-align:center;';
+                const dots = document.createElement('div');
+                dots.className = 'about-dots';
+                dots.innerHTML = dotMatrixSvg('LUNA', 8, '#141414');
+                const line1 = document.createElement('div');
+                line1.innerHTML = 'Agent Workspace · Beta <br>版本 0.1.0 · 视觉风格参考「纸面 + 硬件」美学';
+                const line2 = document.createElement('div');
+                line2.style.cssText = 'margin-top:0.6rem;color:var(--ink-faint);font-family:var(--font-mono);font-size:0.64rem;';
+                line2.textContent = '演示版本 · 不代表最终品质与实际功能';
+                wrap.append(dots, line1, line2);
+                openModal({
+                    title: '关于 LUNA',
+                    body: wrap,
+                    actions: [{ label: '知道了', kind: 'dark', onClick: function () { } }]
+                });
+            }
+
+            /* =====================================================
+             * 顶部菜单
+             * ===================================================== */
+            const menubar = $('#menubar');
+
+            function closeMenus(except) {
+                $$('.menu.open', menubar).forEach(function (m) {
+                    if (m !== except) m.classList.remove('open');
+                });
+            }
+
+            function toggleMenu(menuEl) {
+                const wasOpen = menuEl.classList.contains('open');
+                closeMenus();
+                if (!wasOpen) {
+                    menuEl.classList.add('open');
+                    const btn = $('.menu-btn', menuEl);
+                    if (btn) btn.focus();
+                }
+            }
+
+            menubar.addEventListener('click', function (e) {
+                const btn = e.target.closest('.menu-btn');
+                if (btn) {
+                    const menuEl = btn.closest('.menu');
+                    if (menuEl) toggleMenu(menuEl);
+                    return;
+                }
+                const item = e.target.closest('.mp-item');
+                if (item && !item.disabled) {
+                    const act = item.dataset.act;
+                    runMenuAction(act);
+                    closeMenus();
+                }
+            });
+
+            document.addEventListener('mousedown', function (e) {
+                if (!menubar.contains(e.target)) closeMenus();
+            });
+
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    closeMenus();
+                    return;
+                }
+                const t = e.target;
+                if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+                if (e.ctrlKey || e.metaKey) return;
+                const key = e.key.toLowerCase();
+                if (['p', 'e', 'v', 'x'].indexOf(key) < 0) return;
+                const menuEl = menubar.querySelector('.menu[data-key="' + key + '"]');
+                if (menuEl) toggleMenu(menuEl);
+            });
+
+            function runMenuAction(act) {
+                const sel = tree ? tree.getSelectedNode() : null;
+                switch (act) {
+                    /* ---- 项目 ---- */
+                    case 'new-file':
+                        openCreateModal(false);
+                        break;
+                    case 'new-dir':
+                        openCreateModal(true);
+                        break;
+                    case 'save-all':
+                        saveAll();
+                        break;
+                    case 'refresh':
+                        refreshTree();
+                        break;
+                    case 'close-tab':
+                        if (activeTabId) requestCloseTab(activeTabId);
+                        else setStatus('没有已打开的标签');
+                        break;
+                    case 'reset':
+                        resetDemo();
+                        break;
+
+                    /* ---- 编辑 ---- */
+                    case 'rename':
+                        if (sel) tree.startRename(sel);
+                        else setStatus('未选中任何文件，无法重命名');
+                        break;
+                    case 'delete':
+                        if (sel) tree.deleteNode(sel);
+                        else setStatus('未选中任何文件，无法删除');
+                        break;
+                    case 'cut':
+                        if (sel) { tree.cutNode(sel); setStatus('待粘贴：' + sel.name); }
+                        else setStatus('未选中任何文件，无法剪切');
+                        break;
+                    case 'paste': {
+                        if (!tree.hasPendingCut()) {
+                            setStatus('没有待粘贴的节点');
+                            break;
+                        }
+                        tree.pasteNode(sel);
+                        if (sel && sel.type === 'dir') setStatus('已粘贴到：' + sel.name);
+                        else setStatus('已粘贴到根目录');
+                        break;
+                    }
+                    case 'copy-name':
+                        if (!sel) {
+                            setStatus('未选中任何文件');
+                            break;
+                        }
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            navigator.clipboard.writeText(sel.name).then(function () {
+                                setStatus('已复制：' + sel.name);
+                            }, function () {
+                                setStatus('复制失败');
+                            });
+                        } else {
+                            setStatus('当前环境不支持剪贴板');
+                        }
+                        break;
+
+                    /* ---- 视图 ---- */
+                    case 'toggle-aurora':
+                        viewState.aurora = !viewState.aurora;
+                        break;
+                    case 'toggle-dots':
+                        viewState.dots = !viewState.dots;
+                        break;
+                    case 'toggle-lines':
+                        viewState.lines = !viewState.lines;
+                        break;
+                    case 'toggle-drift':
+                        viewState.drift = !viewState.drift;
+                        break;
+                    case 'toggle-crt':
+                        viewState.crt = !viewState.crt;
+                        break;
+                    case 'toggle-dark':
+                        viewState.dark = isDarkNow() ? 'light' : 'dark';
+                        setStatus(viewState.dark === 'dark' ? '已切换到深色模式' : '已切换到浅色模式');
+                        log('主题切换：' + (viewState.dark === 'dark' ? '深色' : '浅色'), 'sys');
+                        break;
+                    case 'fs-small':
+                        viewState.fs = 0;
+                        break;
+                    case 'fs-mid':
+                        viewState.fs = 1;
+                        break;
+                    case 'fs-big':
+                        viewState.fs = 2;
+                        break;
+                    case 'view-reset':
+                        Object.assign(viewState, { aurora: true, dots: true, lines: true, drift: true, crt: false, fs: 1, dark: 'system' });
+                        setStatus('视图设置已重置（主题恢复跟随系统）');
+                        break;
+
+                    /* ---- 其他 ---- */
+                    case 'about':
+                        openAboutModal();
+                        break;
+                    case 'clear-log':
+                        logList.innerHTML = '';
+                        logCount.textContent = '♡ 0';
+                        log('已清空操作日志', 'sys');
+                        break;
+                }
+                applyView();
+            }
+
+            /* =====================================================
+             * 文件树初始化与数据流
+             * ===================================================== */
+            const fileTree = new FileTree(document.getElementById('file-tree'), {
+                data: [],
+                defaultExpandAll: true,
+                onSelect(node) {
+                    setStatus(node ? '已选中：' + node.name : '未选中任何文件');
+                },
+                onOpen(node) {
+                    openFile(node);
+                },
+                async onRename(node, newName, oldName) {
+                    log('重命名：' + oldName + ' → ' + newName, 'edit');
+                    const tab = findTab(node.id);
+                    if (tab) {
+                        tab.name = newName;
+                        tab.kind = fileKind(newName);
+                        renderTabs();
+                        if (activeTabId === tab.id) {
+                            const nm = $('.ed-name', center);
+                            if (nm) nm.textContent = newName;
+                            const bd = $('.ed-badge', center);
+                            if (bd) bd.textContent = tab.kind;
+                        }
+                    }
+                    const ok = await callBackend('rename', node.id, newName, oldName);
+                    return ok;
+                },
+                async onMove(node, toParent, fromParent) {
+                    const to = toParent ? toParent.name : '（根目录）';
+                    const from = fromParent ? fromParent.name : '（根目录）';
+                    log('移动：' + node.name + '  →  ' + to + '（原位置：' + from + '）', 'edit');
+                    return callBackend('move', node.id, toParent ? toParent.id : null, fromParent ? fromParent.id : null);
+                },
+                async onDelete(node, parent) {
+                    log('删除：' + node.name, 'del');
+                    const ok = await callBackend('delete', node.id);
+                    if (ok) {
+                        /* 后端接受删除后再同步关闭对应标签页 */
+                        collectIds(node).forEach(function (nid) {
+                            const tab = findTab(nid);
+                            if (tab) closeTabQuiet(nid);
+                        });
+                        updateTreeCount();
+                    }
+                    return ok;
+                },
+                /* 右键菜单扩展：新建文件 / 新建文件夹（在所选节点下） */
+                onMenuExtra(node) {
+                    return [
+                        {
+                            label: '在此新建文件',
+                            action: function () { openCreateModal(false, node); }
+                        },
+                        {
+                            label: '在此新建文件夹',
+                            action: function () { openCreateModal(true, node); }
+                        }
+                    ];
+                }
+            });
+
+            function collectIds(node) {
+                const ids = [node.id];
+                if (node.children) node.children.forEach(function (c) { ids.push.apply(ids, collectIds(c)); });
+                return ids;
+            }
+
+            function closeTabQuiet(id) {
+                const tab = findTab(id);
+                if (!tab) return;
+                tabs.splice(tabs.indexOf(tab), 1);
+                if (activeTabId === id) activeTabId = tabs.length ? tabs[tabs.length - 1].id : null;
+                renderTabs();
+                if (activeTabId) renderEditor(findTab(activeTabId));
+                else renderEmptyState();
+            }
+
+            function refreshTree() {
+                loadTree().then(function (data) {
+                    fileTree.setData(data);
+                    updateTreeCount();
+                    setStatus('已刷新文件树（' + countItems() + ' 项）');
+                    log('刷新文件树', 'sys');
+                });
+            }
+
+            function resetDemo() {
+                tabs.forEach(function (t) { t.dirty = false; });
+                tabs.length = 0;
+                activeTabId = null;
+                renderTabs();
+                fileTree.setData(SAMPLE_TREE.map(function (n) { return JSON.parse(JSON.stringify(n)); }));
+                updateTreeCount();
+                renderEmptyState();
+                logList.innerHTML = '';
+                logCount.textContent = '♡ 0';
+                setStatus('已重置为初始示例数据');
+                log('重置演示数据', 'sys');
+            }
+
+            /* =====================================================
+             * 全局快捷键 / 顶栏按钮
+             * ===================================================== */
+            document.addEventListener('keydown', function (e) {
+                const mod = e.ctrlKey || e.metaKey;
+                if (mod && e.key.toLowerCase() === 's') {
+                    e.preventDefault();
+                    if (e.shiftKey) saveAll();
+                    else if (activeTabId) saveTab(activeTabId);
+                    return;
+                }
+                if (mod && e.key.toLowerCase() === 'r') {
+                    e.preventDefault();
+                    refreshTree();
+                    return;
+                }
+                if (mod && e.key.toLowerCase() === 'w') {
+                    e.preventDefault();
+                    if (activeTabId) requestCloseTab(activeTabId);
+                    return;
+                }
+                if (mod && e.key.toLowerCase() === 'n') {
+                    e.preventDefault();
+                    openCreateModal(!!e.shiftKey);
+                    return;
+                }
+                if (mod && e.key.toLowerCase() === 'd') {
+                    e.preventDefault();
+                    runMenuAction('toggle-dark');
+                    return;
+                }
+            });
+
+            $('#btn-theme').addEventListener('click', function () { runMenuAction('toggle-dark'); });
+            $('#btn-save-all').addEventListener('click', saveAll);
+            $('#btn-refresh').addEventListener('click', refreshTree);
+            $('#btn-new-file').addEventListener('click', function () { openCreateModal(false); });
+            $('#btn-reset').addEventListener('click', resetDemo);
+
+            /* 标签页事件（事件委托） */
+            tabsEl.addEventListener('click', function (e) {
+                const closeBtn = e.target.closest('.t-close');
+                if (closeBtn) {
+                    e.stopPropagation();
+                    const id = closeBtn.dataset.close;
+                    requestCloseTab(id);
+                    return;
+                }
+                const tab = e.target.closest('.tab');
+                if (!tab) return;
+                const id = tab.dataset.id;
+                const t = findTab(id);
+                if (t) {
+                    activeTabId = id;
+                    renderTabs();
+                    renderEditor(t);
+                    setStatus('当前文件：' + t.name);
+                }
+            });
+
+            /* =====================================================
+             * 初始化
+             * ===================================================== */
+            $('#brand-dots').innerHTML = dotMatrixSvg('LUNA', 5, '#141414');
+            applyView();
+            renderEmptyState();
+            updateTreeCount();
+
+            loadTree().then(function (data) {
+                fileTree.setData(data);
+                updateTreeCount();
+                setStatus(hasBackend() ? '数据来自后端' : '已加载示例数据（浏览器预览模式）');
+                log(hasBackend() ? '已从后端加载文件树' : '已加载示例文件树（浏览器预览模式）', 'sys');
+            });
+        })();
+    </script>
+</body>
+
+</html>

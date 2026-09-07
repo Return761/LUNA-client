@@ -1,0 +1,153 @@
+/* ============================================================
+ * theme.css —— LUNA 前端主题轻量化重制（受参考图视觉风格转译）
+ *
+ * 设计语言：暖浅灰底色 · 近黑重音 · 信号黄强调（#FFD60A）·
+ * 大圆角卡片 · 衬线标题 · 等宽小字 · 点阵/网格/弥散渐变装饰。
+ * （不包含任何第三方品牌标识）
+ *
+ * 兼容：保留旧的 --grey-* / --custom-* / --error-color 变量名，
+ * 供 file-tree 组件等默认回退链使用。
+ * ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+
+html {
+    min-width: 480px;
+}
+
+:root {
+    /* ---- 基础色板 ---- */
+    --paper: #f0f0ed;               /* 页面底色（暖浅灰） */
+    --paper-2: #f7f7f3;             /* 卡片底色（米白） */
+    --ink: #141414;                 /* 近黑重音 */
+    --ink-2: #3a3a37;
+    --ink-dim: #8b8b85;             /* 弱化文字 */
+    --ink-faint: #b3b3ac;           /* 更弱文字 */
+    --line: rgba(20, 20, 20, 0.09);       /* 极细边框/分隔（线框主用色） */
+    --line-strong: rgba(20, 20, 20, 0.18);
+    --accent: #ffd60a;              /* 信号黄（唯一高饱和，主色调） */
+    --accent-soft: rgba(255, 214, 10, 0.22);
+    --accent-weak: rgba(255, 214, 10, 0.12);
+    --danger: #ff6b5e;              /* 危险色（删除/错误） */
+
+    /* ---- 弥散渐变（低饱和灰彩，参考弥散渐变背景） ---- */
+    --blob-lilac: #c6bcee;
+    --blob-sage: #c7d2ba;
+    --blob-pink: #f0c9df;
+    --blob-peach: #f2d7c3;
+    --blob-cream: #f5eedc;
+    --blob-aqua: #cde0d8;
+    --blob-opacity: 0.5;            /* 光斑强度（扁平化：调低） */
+
+    /* ---- 面/底（扁平化：以线框 + 高斯模糊为主，弱涂色） ---- */
+    --topbar-bg: rgba(247, 247, 243, 0.62);
+    --panel-bg: rgba(250, 250, 247, 0.46);
+    --pop-bg: rgba(253, 253, 251, 0.9);
+    --modal-bg: rgba(253, 253, 251, 0.9);
+    --tab-bg: rgba(255, 255, 255, 0.34);
+    --tab-active-bg: rgba(255, 255, 255, 0.78);
+    --row-bg: rgba(255, 255, 255, 0.35);
+    --editor-bg: rgba(255, 255, 255, 0.44);
+    --pill-bg: rgba(255, 255, 255, 0.72);
+    --pixel-bg: #141418;            /* 像素装饰卡的实底色（面积小，保留） */
+
+    /* ---- 纹理层（点阵 / 交叉线） ---- */
+    --thin-line: rgba(20, 20, 20, 0.03);
+    --dots: rgba(255, 255, 255, 0.88);
+
+    /* ---- 圆角 / 阴影（阴影整体减淡、弱化） ---- */
+    --radius-lg: 18px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+    --shadow-soft: 0 1px 2px rgba(20, 20, 20, 0.035), 0 6px 18px rgba(20, 20, 20, 0.045);
+    --shadow-pop: 0 2px 8px rgba(20, 20, 20, 0.05), 0 14px 34px rgba(20, 20, 20, 0.08);
+
+    /* ---- 字体 ---- */
+    --font-serif: 'Instrument Serif', 'Noto Serif SC', Georgia, 'Songti SC', 'SimSun', serif;
+    --font-sans: 'Space Grotesk', 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', Consolas, 'Microsoft YaHei', monospace;
+
+    /* ---- 旧变量兼容（file-tree 等组件默认回退链） ---- */
+    --bg-color-0: #ffffff;
+    --bg-color-1: #f2f2f2;
+    --bg-color-2: #e5e5e5;
+    --bg-color-3: #cccccc;
+
+    --grey-0: rgba(20, 20, 20, 1);
+    --grey-1: rgba(90, 90, 86, 1);
+    --grey-2: rgba(127, 127, 122, 1);
+    --grey-3: rgba(148, 148, 142, 1);
+    --grey-4: rgba(190, 190, 184, 1);
+    --grey-0-07: rgba(20, 20, 20, 0.7);
+    --grey-1-07: rgba(90, 90, 86, 0.7);
+    --grey-2-07: rgba(127, 127, 122, 0.7);
+    --grey-3-07: rgba(148, 148, 142, 0.7);
+    --grey-4-07: rgba(190, 190, 184, 0.7);
+
+    --custom-bg-color-0: #fbfbf9;
+    --custom-primary-color: #ffd60a;
+    --custom-primary-font-color: var(--ink);
+    --error-color: #ff6b5e;
+
+    --border-color: #ddddda;
+
+    /* 组件菜单（挂在 body 下的右键菜单）背景 */
+    --ft-menu-bg: rgba(253, 253, 251, 0.9);
+
+    color-scheme: light;
+    font-family: var(--font-sans);
+    font-weight: 400;
+    color: var(--ink);
+}
+
+/* ---------- 深色模式：覆盖变量（黄色主色调保持不变） ---------- */
+
+:root[data-theme="dark"],
+body[data-theme="dark"] {
+    --paper: #17171a;
+    --paper-2: #1f1f23;
+    --ink: #f0f0ea;
+    --ink-2: #d2d2cb;
+    --ink-dim: #96968f;
+    --ink-faint: #62625d;
+    --line: rgba(255, 255, 255, 0.1);
+    --line-strong: rgba(255, 255, 255, 0.18);
+    --accent-soft: rgba(255, 214, 10, 0.2);
+    --accent-weak: rgba(255, 214, 10, 0.14);
+
+    /* 暗色弥散渐变：低亮度灰彩，仍保持柔和渗透 */
+    --blob-lilac: #3d3a5c;
+    --blob-sage: #35402f;
+    --blob-pink: #4a3040;
+    --blob-peach: #4a3a2d;
+    --blob-cream: #45402f;
+    --blob-aqua: #2d4038;
+    --blob-opacity: 0.34;
+
+    --topbar-bg: rgba(23, 23, 26, 0.66);
+    --panel-bg: rgba(28, 28, 32, 0.5);
+    --pop-bg: rgba(32, 32, 37, 0.94);
+    --modal-bg: rgba(32, 32, 37, 0.94);
+    --tab-bg: rgba(255, 255, 255, 0.05);
+    --tab-active-bg: rgba(255, 255, 255, 0.1);
+    --row-bg: rgba(255, 255, 255, 0.04);
+    --editor-bg: rgba(0, 0, 0, 0.26);
+    --pill-bg: rgba(255, 255, 255, 0.12);
+
+    --thin-line: rgba(255, 255, 255, 0.035);
+    --dots: rgba(255, 255, 255, 0.14);
+
+    --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.16), 0 6px 18px rgba(0, 0, 0, 0.14);
+    --shadow-pop: 0 2px 8px rgba(0, 0, 0, 0.2), 0 14px 34px rgba(0, 0, 0, 0.22);
+
+    --ft-menu-bg: rgba(32, 32, 37, 0.94);
+    --custom-bg-color-0: #1f1f23;
+
+    color-scheme: dark;
+}
+
+/* 弥散渐变只在有限参考中作为背景出现（nos5），保持低饱和灰彩 */
